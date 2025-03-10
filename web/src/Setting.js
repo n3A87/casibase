@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {Tag, Tooltip, message} from "antd";
-import {SyncOutlined} from "@ant-design/icons";
+import {QuestionCircleTwoTone, SyncOutlined} from "@ant-design/icons";
 import {isMobile as isMobileDevice} from "react-device-detect";
 import i18next from "i18next";
 import Sdk from "casdoor-js-sdk";
@@ -21,8 +21,10 @@ import XLSX from "xlsx";
 import moment from "moment/moment";
 import * as StoreBackend from "./backend/StoreBackend";
 import {ThemeDefault} from "./Conf";
+import Identicon from "identicon.js";
+import md5 from "md5";
 import React from "react";
-import {QuestionCircleTwoTone} from "@ant-design/icons";
+import {v4 as uuidv4} from "uuid";
 
 export let ServerUrl = "";
 export let CasdoorSdk;
@@ -65,6 +67,32 @@ export function getUserProfileUrl(userName, account) {
 
 export function getMyProfileUrl(account) {
   return getUrlWithLanguage(CasdoorSdk.getMyProfileUrl(account));
+}
+
+export function getUserAvatar(message, account) {
+  if (message.author === "AI") {
+    return AiAvatar;
+  }
+
+  // If account exists and has an avatar, construct URL for other users
+  if (account && account.avatar) {
+    // Find the last slash position
+    const lastSlashIndex = account.avatar.lastIndexOf("/");
+    if (lastSlashIndex !== -1) {
+      // Get the base URL
+      const baseUrl = account.avatar.substring(0, lastSlashIndex + 1);
+      // Get the original filename
+      const originalFilename = account.avatar.substring(lastSlashIndex + 1);
+
+      const extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+
+      return `${baseUrl}${message.author}${extension}`;
+    }
+  }
+
+  // If message author does not have an avatar, generate an Identicon
+  const identicon = new Identicon(md5(message.author), 420);
+  return "data:image/png;base64," + identicon;
 }
 
 export function signin() {
@@ -688,6 +716,7 @@ export function getProviderTypeOptions(category) {
         {id: "Tencent Cloud", name: "Tencent Cloud"},
         {id: "Yi", name: "Yi"},
         {id: "Silicon Flow", name: "Silicon Flow"},
+        {id: "GitHub", name: "GitHub"},
       ]
     );
   } else if (category === "Embedding") {
@@ -714,6 +743,7 @@ export function getProviderTypeOptions(category) {
       {value: "Azure", name: "Azure"},
       {value: "Google Cloud", name: "Google Cloud"},
       {value: "Aliyun", name: "Aliyun"},
+      {value: "Tencent Cloud", name: "Tencent Cloud"},
     ]);
   } else if (category === "Private Cloud") {
     return ([
@@ -763,6 +793,8 @@ const openaiModels = [
   {id: "gpt-4o-2024-05-13", name: "gpt-4o-2024-05-13"},
   {id: "gpt-4o-mini", name: "gpt-4o-mini"},
   {id: "gpt-4o-mini-2024-07-18", name: "gpt-4o-mini-2024-07-18"},
+  {id: "gpt-4.5-preview", name: "gpt-4.5-preview"},
+  {id: "gpt-4.5-preview-2025-02-27", name: "gpt-4.5-preview-2025-02-27"},
 ];
 
 const openaiEmbeddings = [
@@ -801,6 +833,26 @@ export function getProviderSubTypeOptions(category, type) {
     } else {
       return [];
     }
+  } else if (type === "GitHub") {
+    if (category === "Model") {
+      return (
+        [
+          {id: "gpt-4o", name: "GPT-4o"},
+          {id: "gpt-4o-mini", name: "GPT-4o-mini"},
+          {id: "Phi-4-multimodal-instruct", name: "Phi-4-multimodal-instruct"},
+          {id: "Phi-4-mini-instruct", name: "Phi-4-mini-instruct"},
+          {id: "Phi-4", name: "Phi-4"},
+          {id: "Mistral-Large-2411", name: "Mistral-Large-2411"},
+          {id: "AI21-Jamba-1.5-Large", name: "AI21-Jamba-1.5-Large"},
+          {id: "AI21-Jamba-1.5-Mini", name: "AI21-Jamba-1.5-Mini"},
+          {id: "Cohere-command-r-08-2024", name: "Cohere-command-r-08-2024"},
+          {id: "Cohere-command-r-plus-08-2024", name: "Cohere-command-r-plus-08-2024"},
+          {id: "Llama-3.3-70B-Instruct", name: "Llama-3.3-70B-Instruct"},
+        ]
+      );
+    } else {
+      return [];
+    }
   } else if (type === "Hugging Face") {
     if (category === "Model") {
       return (
@@ -830,6 +882,7 @@ export function getProviderSubTypeOptions(category, type) {
       {id: "claude-3-sonnet-20240229", name: "claude-3-sonnet-20240229"},
       {id: "claude-3-opus-20240229", name: "claude-3-opus-20240229"},
       {id: "claude-3-haiku-20240307", name: "claude-3-haiku-20240307"},
+      {id: "claude-3-7-sonnet-20250219", name: "claude-3-7-sonnet-20250219"},
     ];
   } else if (type === "OpenRouter") {
     return (
@@ -1267,6 +1320,10 @@ export function getSpeakerTag(speaker) {
 }
 
 export function getDisplayPrice(price, currency) {
+  if (!price) {
+    return "";
+  }
+
   const tmp = price.toFixed(7);
   let numberStr = tmp.toString();
   if (numberStr.includes(".")) {
@@ -1465,4 +1522,34 @@ export function GetIdFromObject(obj) {
     return "";
   }
   return `${obj.owner}/${obj.name}`;
+}
+
+export function GenerateId() {
+  return uuidv4();
+}
+
+export function getBlockBrowserUrl(providerMap, providerName, block) {
+  const provider = providerMap[providerName];
+  if (!provider || provider.browserUrl === "") {
+    return block;
+  }
+
+  const url = provider.browserUrl.replace("{bh}", block).replace("{chainId}", 1).replace("{clusterId}", provider.network);
+  return (
+    <a target="_blank" rel="noreferrer" href={url}>
+      {block}
+    </a>
+  );
+}
+
+export function formatJsonString(s) {
+  if (s === "") {
+    return "";
+  }
+
+  try {
+    return JSON.stringify(JSON.parse(s), null, 2);
+  } catch (error) {
+    return s;
+  }
 }
