@@ -189,6 +189,10 @@ func (c *ApiController) GetMessageAnswer() {
 
 	modelResult, err := modelProviderObj.QueryText(question, writer, history, store.Prompt, knowledge)
 	if err != nil {
+		if strings.Contains(err.Error(), "write tcp") {
+			c.ResponseError(err.Error())
+			return
+		}
 		c.ResponseErrorStream(message, err.Error())
 		return
 	}

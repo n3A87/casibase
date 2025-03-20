@@ -23,6 +23,7 @@ import MessageList from "./chat/MessageList";
 import ChatInput from "./chat/ChatInput";
 import VoiceInputOverlay from "./chat/VoiceInputOverlay";
 import WelcomeHeader from "./chat/WelcomeHeader";
+import * as MessageBackend from "./backend/MessageBackend";
 
 // Store the input value when the name(chat) leaves
 const inputStore = new Map();
@@ -136,19 +137,12 @@ class ChatBox extends React.Component {
     this.setState({value: "", files: []});
   };
 
-  handleRegenerate = () => {
+  handleRegenerate = (index) => {
+    // can only regenerate after sending the message
     const messages = this.state.messages || [];
-    const isSingleWelcomeMessage = (
-      messages.length === 1 &&
-        messages[0].replyTo === "Welcome" &&
-        messages[0].author === "AI"
-    );
+    const message = [...messages.slice(0, index)].reverse().find(message => message.author !== "AI");
 
-    const text = isSingleWelcomeMessage
-      ? ""
-      : [...messages].reverse().find(message => message.author !== "AI")?.text || "";
-
-    this.props.sendMessage(text, "", true);
+    this.handleEditMessage({...message, text: message.text, updatedTime: new Date().toISOString()});
   };
 
   handleInputChange = async(file) => {
@@ -198,7 +192,6 @@ class ChatBox extends React.Component {
   }
 
   handleMessageLike = (message, reactionType) => {
-    const {updateMessage} = require("./backend/MessageBackend");
     const oppositeReaction = reactionType === "like" ? "dislike" : "like";
     const isCancel = !!message[`${reactionType}Users`]?.includes(this.props.account.name);
 
@@ -211,12 +204,20 @@ class ChatBox extends React.Component {
     message[`${oppositeReaction}Users`] = Setting.deleteElementFromSet(message[`${oppositeReaction}Users`], this.props.account.name);
 
     this.setState({messages: this.state.messages.map(m => m.name === message.name ? message : m)});
-    updateMessage(message.owner, message.name, message).then((result) => {
+    MessageBackend.updateMessage(message.owner, message.name, message).then((result) => {
       if (result.status === "ok") {
-        if (isCancel) {
-          Setting.showMessage("success", i18next.t("general:Successfully liked"));
+        if (reactionType === "like") {
+          if (isCancel) {
+            Setting.showMessage("success", i18next.t("general:Successfully unliked"));
+          } else {
+            Setting.showMessage("success", i18next.t("general:Successfully liked"));
+          }
         } else {
-          Setting.showMessage("success", i18next.t("general:Successfully unliked"));
+          if (isCancel) {
+            Setting.showMessage("success", i18next.t("general:Successfully undisliked"));
+          } else {
+            Setting.showMessage("success", i18next.t("general:Successfully disliked"));
+          }
         }
       } else {
         Setting.showMessage("error", result.msg);
@@ -238,6 +239,7 @@ class ChatBox extends React.Component {
     } else {
       this.synth.cancel();
       const utterThis = new SpeechSynthesisUtterance(message.text);
+      utterThis.lang = Setting.getLanguage();
       utterThis.addEventListener("end", () => {
         this.synth.cancel();
         this.setState({isReading: false, readingMessage: null});
@@ -287,6 +289,30 @@ class ChatBox extends React.Component {
     }
   };
 
+  handleEditMessage = (message) => {
+    const editedMessage = {
+      ...message,
+      createdTime: moment().format(),
+    };
+    MessageBackend.addMessage(editedMessage)
+      .then((res) => {
+        if (res.status === "ok") {
+          const chat = res.data;
+
+          if (this.props.onMessageEdit) {
+            this.props.onMessageEdit(chat.name);
+          }
+
+          Setting.showMessage("success", i18next.t("general:Successfully update"));
+        } else {
+          Setting.showMessage("error", `${i18next.t("general:Failed to add")}: ${res.msg}`);
+        }
+      })
+      .catch(error => {
+        Setting.showMessage("error", `${i18next.t("general:Failed to connect to server")}: ${error}`);
+      });
+  };
+
   render() {
     let messages = this.props.messages;
     if (messages === null) {
@@ -324,6 +350,7 @@ class ChatBox extends React.Component {
             onMessageLike={this.handleMessageLike}
             onCopyMessage={this.copyMessageFromHTML}
             onToggleRead={this.toggleMessageReadState}
+            onEditMessage={this.handleEditMessage}
             previewMode={this.props.previewMode}
             hideInput={this.props.hideInput}
             disableInput={this.props.disableInput}
@@ -332,17 +359,20 @@ class ChatBox extends React.Component {
             sendMessage={this.props.sendMessage}
           />
 
-          <ChatInput
-            value={this.state.value}
-            onChange={(value) => this.setState({value})}
-            onSend={this.handleSend}
-            onFileUpload={this.handleFileUploadClick}
-            loading={this.props.loading}
-            disableInput={this.props.disableInput}
-            onCancelMessage={this.props.onCancelMessage}
-            onVoiceInputStart={() => this.setState({isVoiceInput: true})}
-            onVoiceInputEnd={() => this.setState({isVoiceInput: false})}
-          />
+          {!this.props.disableInput && (
+            <ChatInput
+              value={this.state.value}
+              onChange={(value) => this.setState({value})}
+              onSend={this.handleSend}
+              onFileUpload={this.handleFileUploadClick}
+              loading={this.props.loading}
+              disableInput={this.props.disableInput}
+              messageError={this.props.messageError}
+              onCancelMessage={this.props.onCancelMessage}
+              onVoiceInputStart={() => this.setState({isVoiceInput: true})}
+              onVoiceInputEnd={() => this.setState({isVoiceInput: false})}
+            />
+          )}
         </Card>
 
         {this.state.isVoiceInput ? (

@@ -268,7 +268,7 @@ class ProviderEditPage extends React.Component {
                     onChange={(value) => {
                       this.updateProviderField("subType", value);
                     }}
-                    options={Setting.getProviderSubTypeOptions(this.state.provider.category, this.state.provider.type)}
+                    options={Setting.getProviderSubTypeOptions(this.state.provider.category, this.state.provider.type).map((item) => Setting.getOption(item.name, item.id))}
                     placeholder="Please select or enter the model name"
                   />
                 ) : (
@@ -353,6 +353,79 @@ class ProviderEditPage extends React.Component {
                       Setting.getCompitableProviderOptions(this.state.provider.category)
                       // .sort((a, b) => a.name.localeCompare(b.name))
                         .map((item, index) => <Option key={index} value={item.id}>{item.name}</Option>)
+                    }
+                  </Select>
+                </Col>
+              </Row>
+            </>
+          ) : null
+        }
+        {
+          !(this.state.provider.category === "Model" && (this.state.provider.type === "Local" || this.state.provider.type === "Ollama")) ? null : (
+            <>
+              <Row style={{marginTop: "20px"}} >
+                <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
+                  {i18next.t("provider:Input price / 1k tokens")}:
+                </Col>
+                <Col span={22} >
+                  <InputNumber min={0} value={this.state.provider.inputPricePerThousandTokens} onChange={value => {
+                    this.updateProviderField("inputPricePerThousandTokens", value);
+                  }} />
+                </Col>
+              </Row>
+              <Row style={{marginTop: "20px"}} >
+                <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
+                  {i18next.t("provider:Output price / 1k tokens")}:
+                </Col>
+                <Col span={22} >
+                  <InputNumber min={0} value={this.state.provider.outputPricePerThousandTokens} onChange={value => {
+                    this.updateProviderField("outputPricePerThousandTokens", value);
+                  }} />
+                </Col>
+              </Row>
+            </>
+          )
+        }
+        {
+          !(this.state.provider.category === "Embedding" && (this.state.provider.type === "Local" || this.state.provider.type === "Ollama")) ? null : (
+            <>
+              <Row style={{marginTop: "20px"}} >
+                <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
+                  {i18next.t("provider:Input price / 1k tokens")}:
+                </Col>
+                <Col span={22} >
+                  <InputNumber min={0} value={this.state.provider.inputPricePerThousandTokens} onChange={value => {
+                    this.updateProviderField("inputPricePerThousandTokens", value);
+                  }} />
+                </Col>
+              </Row>
+            </>
+          )
+        }
+        {
+          (this.state.provider.type === "Local" || this.state.provider.type === "Ollama") ? (
+            <>
+              <Row style={{marginTop: "20px"}} >
+                <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
+                  {i18next.t("provider:Currency")}:
+                </Col>
+                <Col span={22} >
+                  <Select virtual={false} style={{width: "100%"}} value={this.state.provider.currency} onChange={(value => {
+                    this.updateProviderField("currency", value);
+                  })}>
+                    {
+                      [
+                        {id: "USD", name: "USD"},
+                        {id: "CNY", name: "CNY"},
+                        {id: "EUR", name: "EUR"},
+                        {id: "JPY", name: "JPY"},
+                        {id: "GBP", name: "GBP"},
+                        {id: "AUD", name: "AUD"},
+                        {id: "CAD", name: "CAD"},
+                        {id: "CHF", name: "CHF"},
+                        {id: "HKD", name: "HKD"},
+                        {id: "SGD", name: "SGD"},
+                      ].map((item, index) => <Option key={index} value={item.id}>{item.name}</Option>)
                     }
                   </Select>
                 </Col>
