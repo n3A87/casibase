@@ -210,7 +210,7 @@ class MachineListPage extends BaseListPage {
               <ConnectModal
                 owner={machine.owner}
                 name={machine.name}
-                category={"Node"}
+                category={"Machine"}
                 node={machine}
               />
               <Button
@@ -240,23 +240,15 @@ class MachineListPage extends BaseListPage {
 
     return (
       <div>
-        <Table columns={columns}
-          dataSource={machines}
-          rowKey="name"
-          size="middle"
-          bordered
-          pagination={paginationProps}
+        <Table scroll={{x: "max-content"}} columns={columns} dataSource={machines} rowKey={"name"} size="middle" bordered pagination={paginationProps}
           title={() => (
             <div>
               {i18next.t("general:Machines")}&nbsp;&nbsp;&nbsp;&nbsp;
-              <Button type="primary" size="small" onClick={() => this.addMachine()}>{i18next.t("general:Add")}</Button>
+              <Button type="primary" size="small" onClick={this.addMachine.bind(this)}>{i18next.t("general:Add")}</Button>
             </div>
           )}
-          loading={machines === null}
-          onChange={(pagination, filters, sorter) => {
-            this.handleTableChange(pagination, filters, sorter);
-          }}
-          scroll={{x: "max-content"}}
+          loading={this.state.loading}
+          onChange={this.handleTableChange}
         />
       </div>
     );
